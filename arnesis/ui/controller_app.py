@@ -26,6 +26,9 @@ from arnesis.ui.theme import ArnesisTheme
 from arnesis.ui.data_export_settings_view import DataExportSettingsView
 from arnesis.ui.ux_messages import DialogService, MessageLevel, UserMessage
 
+from arnesis.application.processing_profile_service import ProcessingProfileService
+from arnesis.ui.processing_profile_view import ProcessingProfileView
+
 
 class ArnesisControllerApp(tk.Tk):
     """Main dark-mode shell for real-time Arnesis configuration and control."""
@@ -44,6 +47,9 @@ class ArnesisControllerApp(tk.Tk):
         self.group_service = GroupManagementService(self.context.database, self.processing)
         self.camera_service = CameraManagementService(self.context.database)
         self.model_service = ModelRegistryService(self.context.database)
+        self.processing_profile_service = ProcessingProfileService(
+            self.context.database
+        )
         self.roi_service = RoiService(self.context.database)
         self._camera_dialog: CameraManagerDialog | None = None
         self._current_view: tk.Widget | None = None
@@ -106,7 +112,7 @@ class ArnesisControllerApp(tk.Tk):
             ("Cameras", self._open_camera_manager),
             ("ROIs", self._show_rois),
             ("Models", self._show_models),
-            ("Processing Profiles", lambda: self._show_placeholder("Processing Profiles", "Assign detection, classification and pose settings to ROIs.")),
+            ("Processing Profiles", self._show_processing_profiles),
             ("GPU Resources", lambda: self._show_placeholder("GPU Resources", "Configure memory, group and stream limits for each CUDA device.")),
             ("Logs", lambda: self._show_placeholder("Logs", "Review application, camera, database and CUDA events.")),
             ("Settings", self._show_settings),
@@ -270,14 +276,15 @@ class ArnesisControllerApp(tk.Tk):
                 "camera_service": self.camera_service,
                 "roi_service": self.roi_service,
             }
+
+            if "profile_service" in parameters:
+                arguments["profile_service"] = self.processing_profile_service
+
             if "frame_provider" in parameters:
                 arguments["frame_provider"] = self._request_roi_frame
             elif "on_request_frame" in parameters:
                 arguments["on_request_frame"] = self._request_roi_frame
-            else:
-                raise TypeError(
-                    "The installed RoiEditorView exposes no supported frame provider."
-                )
+
             return RoiEditorView(**arguments)
 
         if "on_request_frame" in parameters:
@@ -359,6 +366,18 @@ class ArnesisControllerApp(tk.Tk):
         """Display the persistent CUDA model registry."""
         self._clear_content()
         view = ModelRegistryView(self.content, self.model_service)
+        view.pack(fill="both", expand=True)
+        self._current_view = view
+
+
+    def _show_processing_profiles(self) -> None:
+        """Display persistent processing profile configuration."""
+        self._clear_content()
+        view = ProcessingProfileView(
+            self.content,
+            self.processing_profile_service,
+            self.model_service,
+        )
         view.pack(fill="both", expand=True)
         self._current_view = view
 
