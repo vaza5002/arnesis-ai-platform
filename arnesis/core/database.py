@@ -81,6 +81,8 @@ class DatabaseManager:
             ModelDefinition,
             ProcessingProfile,
             Roi,
+            StationMetricSample,
+            SystemSetting,
         )
 
         Base.metadata.create_all(bind=self.engine)

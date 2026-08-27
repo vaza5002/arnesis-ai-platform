@@ -13,7 +13,7 @@ from arnesis.application.bootstrap import bootstrap_application
 from arnesis.application.camera_management_service import CameraManagementService
 from arnesis.application.group_management_service import GroupManagementService
 from arnesis.application.processing_service import ProcessingService
-from arnesis.application.processing_profile_service import ProcessingProfileService
+from arnesis.application.export_settings_service import ExportSettingsService
 from arnesis.application.roi_service import RoiService
 from arnesis.domain.entities import GpuCapacity
 from arnesis.ui.camera_manager_dialog import CameraManagerDialog
@@ -22,8 +22,8 @@ from arnesis.ui.realtime_processing_view import RealTimeProcessingView
 from arnesis.ui.roi_editor_view import RoiEditorView
 from arnesis.application.model_registry_service import ModelRegistryService
 from arnesis.ui.model_registry_view import ModelRegistryView
-from arnesis.ui.processing_profile_view import ProcessingProfileView
 from arnesis.ui.theme import ArnesisTheme
+from arnesis.ui.data_export_settings_view import DataExportSettingsView
 from arnesis.ui.ux_messages import DialogService, MessageLevel, UserMessage
 
 
@@ -40,10 +40,10 @@ class ArnesisControllerApp(tk.Tk):
 
         self.context = bootstrap_application()
         self.processing = ProcessingService(self.context.database, self.context.gpu_capacity)
+        self.export_settings = ExportSettingsService(self.context.database)
         self.group_service = GroupManagementService(self.context.database, self.processing)
         self.camera_service = CameraManagementService(self.context.database)
         self.model_service = ModelRegistryService(self.context.database)
-        self.profile_service = ProcessingProfileService(self.context.database)
         self.roi_service = RoiService(self.context.database)
         self._camera_dialog: CameraManagerDialog | None = None
         self._current_view: tk.Widget | None = None
@@ -106,10 +106,10 @@ class ArnesisControllerApp(tk.Tk):
             ("Cameras", self._open_camera_manager),
             ("ROIs", self._show_rois),
             ("Models", self._show_models),
-            ("Processing Profiles", self._show_processing_profiles),
+            ("Processing Profiles", lambda: self._show_placeholder("Processing Profiles", "Assign detection, classification and pose settings to ROIs.")),
             ("GPU Resources", lambda: self._show_placeholder("GPU Resources", "Configure memory, group and stream limits for each CUDA device.")),
             ("Logs", lambda: self._show_placeholder("Logs", "Review application, camera, database and CUDA events.")),
-            ("Settings", lambda: self._show_placeholder("Settings", "Manage application defaults and advanced policies.")),
+            ("Settings", self._show_settings),
         ]
         for name, command in items:
             button = tk.Button(
@@ -269,16 +269,15 @@ class ArnesisControllerApp(tk.Tk):
                 "group_service": self.group_service,
                 "camera_service": self.camera_service,
                 "roi_service": self.roi_service,
-                "profile_service": self.profile_service,
             }
-
-            # Runtime preview callbacks are optional. The current editor obtains
-            # static configuration frames through CameraManagementService.
             if "frame_provider" in parameters:
                 arguments["frame_provider"] = self._request_roi_frame
             elif "on_request_frame" in parameters:
                 arguments["on_request_frame"] = self._request_roi_frame
-
+            else:
+                raise TypeError(
+                    "The installed RoiEditorView exposes no supported frame provider."
+                )
             return RoiEditorView(**arguments)
 
         if "on_request_frame" in parameters:
@@ -302,7 +301,7 @@ class ArnesisControllerApp(tk.Tk):
     ) -> None:
         """Select the requested group and optional camera in the ROI editor."""
         select_context = getattr(view, "select_camera_context", None)
-        if callable(select_context):
+        if camera_id is not None and callable(select_context):
             select_context(group_id, camera_id)
             return
 
@@ -356,17 +355,6 @@ class ArnesisControllerApp(tk.Tk):
             lambda: self._show_rois(group_id=group_id),
         )
 
-    def _show_processing_profiles(self) -> None:
-        """Display processing profile configuration and model assignments."""
-        self._clear_content()
-        view = ProcessingProfileView(
-            self.content,
-            self.profile_service,
-            self.model_service,
-        )
-        view.pack(fill="both", expand=True)
-        self._current_view = view
-
     def _show_models(self) -> None:
         """Display the persistent CUDA model registry."""
         self._clear_content()
@@ -414,6 +402,17 @@ class ArnesisControllerApp(tk.Tk):
                 widget.configure(style="Arnesis.TCombobox")
             elif isinstance(widget, ttk.Checkbutton):
                 widget.configure(style="Arnesis.TCheckbutton")
+
+    def _show_settings(self) -> None:
+        """Display configurable CSV export settings."""
+        self._clear_content()
+        view = DataExportSettingsView(
+            self.content,
+            self.export_settings,
+            self.processing.metrics_export,
+        )
+        view.pack(fill="both", expand=True)
+        self._current_view = view
 
     def _show_placeholder(self, title: str, message: str) -> None:
         self._clear_content()
