@@ -1,0 +1,112 @@
+﻿# ============================================================
+# Arnesis Git exclusions
+# ============================================================
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Visual Studio and editors
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Python build output
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Runtime logs
+logs/
+log/
+*.log
+
+# Temporary and backup files
+tmp/
+temp/
+*.tmp
+*.bak
+*.old
+*.swp
+~$*
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Secrets and local environment configuration
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+secure/
+*.key
+*.pem
+*.pfx
+*.p12
+
+# Camera and RTSP credentials
+*credential*
+*credentials*
+*password*
+*secret*
+camera_passwords*
+rtsp_credentials*
+
+# AI model binaries
+Models/
+models/
+*.pt
+*.pth
+*.onnx
+*.engine
+*.torchscript
+
+# Videos and camera captures
+captures/
+recordings/
+screenshots/
+ValidationEvidence/
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.webm
+
+# Generated packages
+*.zip
+*.7z
+*.rar
+Arnesis_Package_*/
+Arnesis_Fix_*/
+
+# Local configuration overrides
+config.local.*
+settings.local.*
+
+# Operating system files
+Thumbs.db
+Desktop.ini
+.DS_Store
