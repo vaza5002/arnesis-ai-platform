@@ -248,3 +248,47 @@ class GpuCapacity(Base, TimestampMixin):
     maximum_groups: Mapped[int] = mapped_column(Integer, default=8, nullable=False)
     maximum_streams: Mapped[int] = mapped_column(Integer, default=32, nullable=False)
     priority: Mapped[int] = mapped_column(Integer, default=100, nullable=False)
+
+
+class SystemSetting(Base, TimestampMixin):
+    """Persistent application setting compatible with SQLite and Oracle 11g."""
+
+    __tablename__ = "arn_system_setting"
+
+    setting_key: Mapped[str] = mapped_column(String(100), primary_key=True)
+    setting_value: Mapped[str] = mapped_column(String(1000), nullable=False)
+    description: Mapped[str | None] = mapped_column(String(500))
+
+
+class StationMetricSample(Base, TimestampMixin):
+    """Anonymous per-ROI occupancy and performance observation."""
+
+    __tablename__ = "arn_station_metric"
+    __table_args__ = (
+        UniqueConstraint(
+            "group_id", "camera_id", "roi_id", "observed_at",
+            name="uq_station_metric_observation",
+        ),
+        CheckConstraint("head_count >= 0", name="ck_metric_head_nonnegative"),
+        CheckConstraint("person_count >= 0", name="ck_metric_person_nonnegative"),
+        CheckConstraint("va_count >= 0", name="ck_metric_va_nonnegative"),
+        CheckConstraint("nva_count >= 0", name="ck_metric_nva_nonnegative"),
+        CheckConstraint("neutral_count >= 0", name="ck_metric_neutral_nonnegative"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    observed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    group_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    group_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    camera_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    camera_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    roi_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    roi_name: Mapped[str] = mapped_column(String(150), nullable=False)
+    head_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    person_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    occupied: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    va_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    nva_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    neutral_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    cuda_device: Mapped[str | None] = mapped_column(String(100))
+    source_sequence: Mapped[int | None] = mapped_column(Integer)
