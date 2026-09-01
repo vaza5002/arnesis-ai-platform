@@ -57,6 +57,38 @@ class RoiAssignment:
     processing_profile_id: int | None
 
 
+class PreparedRoiGeometryCache:
+    """Cache prepared pixel ROI geometry by frame resolution.
+
+    A DetectionWorker owns one instance, so ROI records remain isolated per camera.
+    The cache can be explicitly invalidated if runtime ROI configuration is refreshed.
+    """
+
+    def __init__(self, roi_records: Iterable[Mapping[str, Any]]) -> None:
+        self._roi_records = tuple(roi_records)
+        self._items: dict[tuple[int, int], tuple[PixelRoi, ...]] = {}
+
+    def get(self, frame_width: int, frame_height: int) -> tuple[PixelRoi, ...]:
+        key = (int(frame_width), int(frame_height))
+        prepared = self._items.get(key)
+        if prepared is None:
+            prepared = RoiAssignmentEngine.prepare_rois(
+                self._roi_records,
+                frame_width,
+                frame_height,
+            )
+            self._items[key] = prepared
+        return prepared
+
+    def invalidate(
+        self,
+        roi_records: Iterable[Mapping[str, Any]] | None = None,
+    ) -> None:
+        if roi_records is not None:
+            self._roi_records = tuple(roi_records)
+        self._items.clear()
+
+
 class RoiAssignmentEngine:
     """Convert normalized ROIs and assign tracked people deterministically."""
 
